@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <!-- PWA iPhone -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Frais KM">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+
+  <title>ANTICORP — Frais KM</title>
+
+  <!-- Icône home screen (SVG inline converti en data URI) -->
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+    :root {
+      --red: #CC0000;
+      --bg: #0e0e0e;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #888;
+      --dim: #444;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+
+    body { overscroll-behavior: none; }
+
+    /* ── HEADER ── */
+    header {
+      background: #000;
+      border-bottom: 3px solid var(--red);
+      padding: calc(var(--safe-top) + 14px) 20px 14px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: baseline; }
+    .logo .anti { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: var(--red); }
+    .logo .corp { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: #fff; }
+    .app-name { font-size: 9px; letter-spacing: 4px; color: #555; margin-top: 3px; }
+
+    /* ── LAYOUT ── */
+    main { padding: 22px 16px calc(var(--safe-bottom) + 48px); max-width: 500px; margin: 0 auto; }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 22px; }
+    .section-label { font-size: 9px; letter-spacing: 4px; color: var(--red); font-weight: 600; margin-bottom: 8px; }
+
+    /* ── INPUT ── */
+    input[type=text], input[type=number], input[type=password] {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-family: 'IBM Plex Mono', monospace;
+      font-size: 16px; padding: 13px 14px; outline: none;
+      -webkit-appearance: none; transition: border-color .15s;
+    }
+    input:focus { border-color: var(--red); }
+    input::placeholder { color: #3a3a3a; }
+
+    /* ── AUTOCOMPLETE ── */
+    .autocomplete-wrap { position: relative; }
+    .dropdown {
+      position: absolute; top: 100%; left: 0; right: 0;
+      background: #1a1a1a; border: 1px solid #333; border-top: none;
+      border-radius: 0 0 4px 4px; z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,.7); overflow: hidden;
+    }
+    .drop-item { padding: 12px 14px; font-size: 14px; color: #bbb; border-bottom: 1px solid #222; cursor: pointer; }
+    .drop-item:active { background: #222; }
+    .drop-arrow { color: var(--red); margin-right: 6px; }
+
+    /* ── STOP ROW ── */
+    .stop-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .stop-row .autocomplete-wrap { flex: 1; }
+    .remove-btn {
+      background: var(--surface); border: 1px solid var(--border); color: #666;
+      font-size: 22px; width: 48px; min-width: 48px; height: 50px;
+      border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .remove-btn:active { background: #222; }
+
+    /* ── ADD BTN ── */
+    .add-btn {
+      background: transparent; border: 1px dashed var(--border); color: #555;
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 2px;
+      padding: 12px 16px; width: 100%; cursor: pointer; border-radius: 4px; margin-top: 4px;
+    }
+    .add-btn:active { border-color: #555; color: #888; }
+
+    /* ── HINT ── */
+    .hint { font-size: 9px; color: #333; margin-top: 6px; letter-spacing: .3px; font-style: italic; }
+
+    /* ── CALC BTN ── */
+    .calc-btn {
+      background: var(--red); color: #fff; font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 4px; border: none; border-radius: 4px;
+      width: 100%; padding: 18px; cursor: pointer; margin-top: 4px;
+      -webkit-appearance: none; transition: opacity .15s;
+    }
+    .calc-btn:active { opacity: .8; }
+    .calc-btn:disabled { opacity: .6; pointer-events: none; }
+
+    /* ── ERROR ── */
+    .error-box {
+      background: #1a0000; border: 1px solid #440000; color: #ff7070;
+      padding: 12px 14px; border-radius: 4px; font-size: 11px;
+      margin-top: 16px; line-height: 1.6;
+    }
+
+    /* ── RESULTS ── */
+    .results {
+      margin-top: 24px; background: #000; border: 1px solid #222;
+      border-radius: 6px; padding: 20px 16px 16px; border-top: 3px solid var(--red);
+    }
+    .results-title { font-size: 9px; letter-spacing: 4px; color: var(--red); margin-bottom: 18px; font-weight: 600; }
+
+    .route-wrap { margin-bottom: 20px; }
+    .city-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 11px 14px; font-size: 14px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .city-chip.endpoint { border-color: var(--red); color: #fff; background: var(--bg); }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+    .leg-row { display: flex; align-items: center; gap: 8px; margin: 5px 14px; }
+    .leg-line { flex: 1; height: 1px; background: #1e1e1e; }
+    .leg-km { font-size: 10px; color: var(--dim); letter-spacing: 1px; white-space: nowrap; }
+
+    .stats-row { display: flex; align-items: center; border-top: 1px solid #1a1a1a; padding-top: 18px; margin-bottom: 12px; }
+    .stat-box { flex: 1; text-align: center; }
+    .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 2px; color: #fff; line-height: 1; }
+    .stat-num.red { color: var(--red); }
+    .stat-unit { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: #555; letter-spacing: 2px; margin-bottom: 4px; }
+    .stat-unit.red { color: var(--red); }
+    .stat-label { font-size: 8px; letter-spacing: 2px; color: #333; }
+    .stat-divider { width: 1px; height: 64px; background: #1a1a1a; margin: 0 8px; }
+    .rate-tag { text-align: center; font-size: 9px; color: #2a2a2a; letter-spacing: 1px; margin-bottom: 16px; }
+
+    .reset-btn {
+      background: transparent; border: 1px solid #1e1e1e; color: #444;
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px;
+      padding: 11px; width: 100%; cursor: pointer; border-radius: 3px;
+    }
+    .reset-btn:active { border-color: #333; color: #666; }
+
+    /* ── FOOTER ── */
+    footer { margin-top: 32px; text-align: center; font-size: 8px; color: #222; letter-spacing: 1px; line-height: 1.8; }
+
+    /* ── SETUP SCREEN ── */
+    #setup-screen {
+      position: fixed; inset: 0; background: #000; z-index: 500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 24px calc(var(--safe-bottom) + 32px);
+    }
+    #setup-screen .logo-big .anti { font-family: 'Bebas Neue', sans-serif; font-size: 52px; letter-spacing: 4px; color: var(--red); }
+    #setup-screen .logo-big .corp { font-family: 'Bebas Neue', sans-serif; font-size: 52px; letter-spacing: 4px; color: #fff; }
+    #setup-screen .setup-sub { font-size: 9px; letter-spacing: 4px; color: #555; margin-top: 4px; margin-bottom: 40px; text-align: center; }
+    #setup-screen .setup-label { font-size: 9px; letter-spacing: 4px; color: var(--red); font-weight: 600; margin-bottom: 10px; align-self: flex-start; width: 100%; }
+    #setup-screen .setup-desc { font-size: 10px; color: #444; line-height: 1.7; margin-bottom: 20px; letter-spacing: .3px; }
+    #setup-screen a { color: var(--red); text-decoration: none; }
+    #api-key-input { margin-bottom: 10px; letter-spacing: 1px; }
+    #setup-btn {
+      background: var(--red); color: #fff; font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px; letter-spacing: 4px; border: none; border-radius: 4px;
+      width: 100%; padding: 17px; cursor: pointer; margin-top: 10px;
+    }
+    #setup-btn:active { opacity: .8; }
+    .setup-error { color: #ff7070; font-size: 10px; margin-top: 8px; min-height: 16px; }
+
+    /* ── SETTINGS ── */
+    #settings-btn {
+      position: absolute; top: 0; right: 16px; bottom: 0;
+      background: transparent; border: none; color: #333;
+      font-size: 18px; cursor: pointer; display: flex; align-items: center;
+      padding: 0 4px;
+    }
+    header { position: relative; }
+
+    /* ── LOADING DOTS ── */
+    @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+    .dot { display: inline-block; animation: blink 1.4s infinite; }
+    .dot:nth-child(2) { animation-delay: .2s; }
+    .dot:nth-child(3) { animation-delay: .4s; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SETUP SCREEN (1er lancement / clé manquante)
+═══════════════════════════════════════════════════════════ -->
+<div id="setup-screen" style="display:none">
+  <div class="logo-big"><span class="anti">ANTI</span><span class="corp">CORP</span></div>
+  <div class="setup-sub">FRAIS KILOMÉTRIQUES</div>
+
+  <div class="setup-label">CLÉ API ANTHROPIC</div>
+  <p class="setup-desc">
+    Cette app utilise l'IA pour calculer les distances routières.<br>
+    Obtiens ta clé gratuite sur <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>
+    Elle sera stockée uniquement sur cet iPhone.
+  </p>
+  <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" spellcheck="false">
+  <div class="setup-error" id="setup-error"></div>
+  <button id="setup-btn" onclick="saveApiKey()">ENREGISTRER</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP PRINCIPALE
+═══════════════════════════════════════════════════════════ -->
+<header>
+  <div class="logo"><span class="anti">ANTI</span><span class="corp">CORP</span></div>
+  <div class="app-name">FRAIS KILOMÉTRIQUES</div>
+  <button id="settings-btn" onclick="showSettings()" title="Paramètres">⚙</button>
+</header>
+
+<main>
+
+  <!-- DÉPART -->
+  <div class="section">
+    <div class="section-label">DÉPART</div>
+    <div class="autocomplete-wrap">
+      <input type="text" id="departure" placeholder="Ville de départ"
+        autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+        oninput="onCityInput(this,'dep-drop')" onblur="closeDropdown('dep-drop')">
+      <div class="dropdown" id="dep-drop" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ÉTAPES -->
+  <div class="section">
+    <div class="section-label" id="stops-label">ÉTAPE</div>
+    <div id="stops-container"></div>
+    <button class="add-btn" id="add-stop-btn" onclick="addStop()">+ Ajouter une étape</button>
+  </div>
+
+  <!-- INDEMNITÉ -->
+  <div class="section">
+    <div class="section-label">INDEMNITÉ (€ / km)</div>
+    <input type="number" id="rate" step="0.001" min="0" value="0.401"
+      oninput="saveRate(this.value)">
+    <div class="hint">Barème fiscal 2024 — 5 CV, &lt; 5 000 km : 0,401 €/km</div>
+  </div>
+
+  <!-- BOUTON -->
+  <button class="calc-btn" id="calc-btn" onclick="calculate()">CALCULER LE TRAJET</button>
+
+  <!-- ERREUR -->
+  <div class="error-box" id="error-box" style="display:none"></div>
+
+  <!-- RÉSULTATS -->
+  <div class="results" id="results" style="display:none">
+    <div class="results-title">TRAJET OPTIMAL</div>
+    <div class="route-wrap" id="route-wrap"></div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num" id="stat-km">—</div>
+        <div class="stat-unit">km</div>
+        <div class="stat-label">TOTAL ALLER-RETOUR</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-box">
+        <div class="stat-num red" id="stat-cost">—</div>
+        <div class="stat-unit red">€</div>
+        <div class="stat-label">INDEMNITÉ</div>
+      </div>
+    </div>
+    <div class="rate-tag" id="rate-tag"></div>
+    <button class="reset-btn" onclick="resetForm()">Nouveau calcul</button>
+  </div>
+
+  <footer>Distances estimées par IA · Optimisation TSP · Aller-retour inclus</footer>
+</main>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   STORAGE
+══════════════════════════════════════════════════════════ */
+// Cookies (persistants en PWA iOS standalone) + localStorage fallback
+const LS = {
+  get: k => {
+    // Essai cookie d'abord
+    const match = document.cookie.match('(?:^|; )' + k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '=([^;]*)');
+    if (match) return decodeURIComponent(match[1]);
+    // Fallback localStorage
+    try { return localStorage.getItem(k); } catch(_) { return null; }
+  },
+  set: (k, v) => {
+    // Cookie 1 an, SameSite=Strict
+    const exp = new Date(Date.now() + 365*24*60*60*1000).toUTCString();
+    document.cookie = `${k}=${encodeURIComponent(v)}; expires=${exp}; path=/; SameSite=Strict`;
+    // Aussi dans localStorage pour double sécurité
+    try { localStorage.setItem(k, v); } catch(_) {}
+  },
+  rm: k => {
+    document.cookie = `${k}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    try { localStorage.removeItem(k); } catch(_) {}
+  }
+};
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+let cityHistory = [];
+let stopCount = 0;
+
+function init() {
+  // API Key check
+  if (!LS.get('ac_api_key')) {
+    document.getElementById('setup-screen').style.display = 'flex';
+  }
+
+  // Load persisted data
+  const savedRate = LS.get('ac_rate');
+  if (savedRate) document.getElementById('rate').value = savedRate;
+
+  const savedHistory = LS.get('ac_cities');
+  if (savedHistory) try { cityHistory = JSON.parse(savedHistory); } catch(_) {}
+
+  // Add first stop
+  addStop();
+}
+
+/* ══════════════════════════════════════════════════════════
+   API KEY SETUP
+══════════════════════════════════════════════════════════ */
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const err = document.getElementById('setup-error');
+  if (!key.startsWith('sk-ant-')) {
+    err.textContent = 'La clé doit commencer par "sk-ant-"';
+    return;
+  }
+  LS.set('ac_api_key', key);
+  document.getElementById('setup-screen').style.display = 'none';
+  err.textContent = '';
+}
+
+function showSettings() {
+  const key = LS.get('ac_api_key') || '';
+  const masked = key ? key.slice(0, 10) + '…' + key.slice(-4) : '(aucune)';
+  if (confirm(`Clé actuelle : ${masked}\n\nModifier la clé API ?`)) {
+    LS.rm('ac_api_key');
+    document.getElementById('api-key-input').value = '';
+    document.getElementById('setup-error').textContent = '';
+    document.getElementById('setup-screen').style.display = 'flex';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   STOPS
+══════════════════════════════════════════════════════════ */
+function addStop() {
+  const container = document.getElementById('stops-container');
+  const id = stopCount++;
+  const dropId = `drop-${id}`;
+
+  const row = document.createElement('div');
+  row.className = 'stop-row';
+  row.id = `stop-row-${id}`;
+  row.innerHTML = `
+    <div class="autocomplete-wrap">
+      <input type="text" id="stop-${id}" placeholder="Destination"
+        autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+        oninput="onCityInput(this,'${dropId}')" onblur="closeDropdown('${dropId}')">
+      <div class="dropdown" id="${dropId}" style="display:none"></div>
+    </div>
+    <button class="remove-btn" onclick="removeStop(${id})">×</button>
+  `;
+  container.appendChild(row);
+  updateStopsUI();
+
+  // Focus new input on desktop, skip on mobile to avoid keyboard jump
+  if (stopCount > 1) {
+    setTimeout(() => { document.getElementById(`stop-${id}`)?.focus(); }, 50);
+  }
+}
+
+function removeStop(id) {
+  document.getElementById(`stop-row-${id}`)?.remove();
+  updateStopsUI();
+}
+
+function updateStopsUI() {
+  const rows = document.querySelectorAll('.stop-row');
+  const n = rows.length;
+
+  document.getElementById('stops-label').textContent = n > 1 ? 'ÉTAPES' : 'ÉTAPE';
+
+  // Show/hide × buttons
+  rows.forEach(row => {
+    const btn = row.querySelector('.remove-btn');
+    if (btn) btn.style.display = n > 1 ? 'flex' : 'none';
+  });
+
+  // Show/hide add button
+  document.getElementById('add-stop-btn').style.display = n >= 4 ? 'none' : '';
+}
+
+function getStops() {
+  return Array.from(document.querySelectorAll('.stop-row input'))
+    .map(i => i.value.trim())
+    .filter(Boolean);
+}
+
+/* ══════════════════════════════════════════════════════════
+   AUTOCOMPLETE
+══════════════════════════════════════════════════════════ */
+function onCityInput(input, dropId) {
+  const val = input.value.trim();
+  const drop = document.getElementById(dropId);
+  if (val.length < 2 || !cityHistory.length) { drop.style.display = 'none'; return; }
+
+  const matches = cityHistory.filter(c => c.toLowerCase().startsWith(val.toLowerCase())).slice(0, 5);
+  if (!matches.length) { drop.style.display = 'none'; return; }
+
+  drop.innerHTML = matches.map(c =>
+    `<div class="drop-item" onmousedown="selectCity(event,'${c.replace(/'/g,"\\'")}','${dropId}')">
+      <span class="drop-arrow">↗</span>${c}
+    </div>`
+  ).join('');
+  drop.style.display = 'block';
+}
+
+function selectCity(e, city, dropId) {
+  e.preventDefault();
+  const drop = document.getElementById(dropId);
+  const input = drop.previousElementSibling;
+  if (input) input.value = city;
+  drop.style.display = 'none';
+}
+
+function closeDropdown(dropId) {
+  setTimeout(() => {
+    const d = document.getElementById(dropId);
+    if (d) d.style.display = 'none';
+  }, 150);
+}
+
+/* ══════════════════════════════════════════════════════════
+   RATE
+══════════════════════════════════════════════════════════ */
+function saveRate(v) {
+  LS.set('ac_rate', v);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TSP
+══════════════════════════════════════════════════════════ */
+function perms(arr) {
+  if (arr.length <= 1) return [arr];
+  const out = [];
+  for (let i = 0; i < arr.length; i++) {
+    const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
+    for (const p of perms(rest)) out.push([arr[i], ...p]);
+  }
+  return out;
+}
+
+function bestRoute(matrix, n) {
+  if (n === 2) return { order: [1], dist: matrix[0][1] + matrix[1][0] };
+  const dests = Array.from({ length: n - 1 }, (_, i) => i + 1);
+  let best = Infinity, bestPerm = dests;
+  for (const p of perms(dests)) {
+    let d = matrix[0][p[0]];
+    for (let i = 0; i < p.length - 1; i++) d += matrix[p[i]][p[i + 1]];
+    d += matrix[p[p.length - 1]][0];
+    if (d < best) { best = d; bestPerm = [...p]; }
+  }
+  return { order: bestPerm, dist: best };
+}
+
+/* ══════════════════════════════════════════════════════════
+   API CALL
+══════════════════════════════════════════════════════════ */
+async function getDistances(cities) {
+  const n = cities.length;
+  const apiKey = LS.get('ac_api_key');
+  if (!apiKey) throw new Error('Clé API manquante — appuie sur ⚙ pour la configurer.');
+
+  const prompt =
+    `Distances routières en km (par la route, France) entre : ${cities.join(', ')}.\n` +
+    `Réponds UNIQUEMENT avec ce JSON, sans texte ni backtick :\n` +
+    `{"matrix":[[0,...],[...],...]}\n` +
+    `Matrice ${n}x${n}, diagonale=0, valeurs entières.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    let msg = `Erreur API (${res.status})`;
+    try { const j = JSON.parse(txt); msg += ` : ${j.error?.message || txt.slice(0, 120)}`; }
+    catch (_) { msg += ` : ${txt.slice(0, 120)}`; }
+    if (res.status === 401) msg = 'Clé API invalide. Appuie sur ⚙ pour la corriger.';
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  if (data.type === 'error' || data.error) throw new Error(`API : ${data.error?.message}`);
+
+  const raw = (data.content?.[0]?.text || '').trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error(`Réponse inattendue : "${raw.slice(0, 80)}"`);
+
+  let parsed;
+  try { parsed = JSON.parse(m[0]); }
+  catch (_) { throw new Error(`JSON invalide reçu`); }
+
+  if (!Array.isArray(parsed.matrix) || parsed.matrix.length !== n)
+    throw new Error(`Matrice incorrecte (${parsed.matrix?.length} lignes reçues, ${n} attendues)`);
+
+  return parsed.matrix;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CALCULATE
+══════════════════════════════════════════════════════════ */
+async function calculate() {
+  const departure = document.getElementById('departure').value.trim();
+  const stops = getStops();
+  const rateVal = parseFloat(document.getElementById('rate').value) || 0.401;
+
+  if (!departure) { showError('Entrez une ville de départ.'); return; }
+  if (!stops.length) { showError('Entrez au moins une destination.'); return; }
+
+  setLoading(true);
+  hideError();
+  document.getElementById('results').style.display = 'none';
+
+  try {
+    const cities = [departure, ...stops];
+    setBtn('Calcul des distances<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>');
+    const matrix = await getDistances(cities);
+
+    setBtn('Optimisation<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>');
+    const { order, dist } = bestRoute(matrix, cities.length);
+
+    const routeIdx = [0, ...order, 0];
+    const routeNames = routeIdx.map(i => cities[i]);
+    const km = Math.round(dist);
+    const cost = (km * rateVal).toFixed(2);
+
+    const legs = [];
+    for (let i = 0; i < routeIdx.length - 1; i++) {
+      legs.push(Math.round(matrix[routeIdx[i]][routeIdx[i + 1]]));
+    }
+
+    // Update history
+    const newH = [...cityHistory];
+    for (const c of cities) if (!newH.includes(c)) newH.unshift(c);
+    cityHistory = newH.slice(0, 20);
+    LS.set('ac_cities', JSON.stringify(cityHistory));
+
+    renderResults(routeNames, legs, km, cost, rateVal);
+
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    setLoading(false);
+    setBtn('CALCULER LE TRAJET');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER RESULTS
+══════════════════════════════════════════════════════════ */
+function renderResults(routeNames, legs, km, cost, rate) {
+  const wrap = document.getElementById('route-wrap');
+  wrap.innerHTML = '';
+
+  routeNames.forEach((city, i) => {
+    const isEndpoint = i === 0 || i === routeNames.length - 1;
+
+    if (i > 0) {
+      const legRow = document.createElement('div');
+      legRow.className = 'leg-row';
+      legRow.innerHTML = `<div class="leg-line"></div><div class="leg-km">${legs[i-1]} km</div><div class="leg-line"></div>`;
+      wrap.appendChild(legRow);
+    }
+
+    const chip = document.createElement('div');
+    chip.className = 'city-chip' + (isEndpoint ? ' endpoint' : '');
+    chip.innerHTML = (isEndpoint ? '<span class="chip-dot"></span>' : '') + city;
+    wrap.appendChild(chip);
+  });
+
+  document.getElementById('stat-km').textContent = km;
+  document.getElementById('stat-cost').textContent = cost;
+  document.getElementById('rate-tag').textContent = `@ ${rate.toFixed(3)} €/km · distances estimées IA`;
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ══════════════════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════════════════ */
+function setLoading(on) {
+  document.getElementById('calc-btn').disabled = on;
+}
+function setBtn(html) {
+  document.getElementById('calc-btn').innerHTML = html;
+}
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+function resetForm() {
+  document.getElementById('departure').value = '';
+  document.querySelectorAll('.stop-row input').forEach(i => i.value = '');
+  document.getElementById('results').style.display = 'none';
+  hideError();
+  document.querySelector('header').scrollIntoView();
+}
+
+/* ══════════════════════════════════════════════════════════
+   ENTER KEY
+══════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.target.blur(); }
+});
+
+/* ══════════════════════════════════════════════════════════
+   GO
+══════════════════════════════════════════════════════════ */
+init();
+</script>
+</body>
+</html>
